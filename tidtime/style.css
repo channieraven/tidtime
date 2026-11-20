@@ -1,0 +1,169 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #f4f5ef;
+  color: #21372f;
+  font:
+    16px/1.6 "Leelawadee UI",
+    Tahoma,
+    sans-serif;
+}
+header {
+  background: #193f35;
+  color: white;
+  padding: 14px 4vw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header strong {
+  font-size: 25px;
+}
+small {
+  font-size: 13px;
+}
+main {
+  max-width: 1500px;
+  margin: auto;
+  padding: 12px 4vw 50px;
+}
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+button,
+select,
+textarea,
+input[type="date"] {
+  border: 1px solid #a8b8aa;
+  border-radius: 6px;
+  padding: 7px 12px;
+  background: white;
+  color: #21372f;
+}
+button {
+  cursor: pointer;
+}
+button:hover,
+button.active {
+  background: #e0eddf;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.primary {
+  background: #245842;
+  color: white;
+  margin-top: 14px;
+}
+.primary:hover {
+  background: #356c54;
+}
+nav button {
+  margin-left: 8px;
+}
+h1 {
+  font-size: 30px;
+  margin-bottom: 0;
+}
+h2 {
+  font-size: 21px;
+  margin: 0 0 8px;
+}
+h3 {
+  font-size: 17px;
+}
+.pair,
+.workspace {
+  display: grid;
+  gap: 16px;
+}
+.pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.workspace {
+  grid-template-columns: minmax(210px, 26%) minmax(0, 1fr);
+  align-items: start;
+}
+.card,
+aside,
+article,
+.event {
+  background: white;
+  padding: 16px;
+  border: 1px solid #ced6c9;
+  border-radius: 9px;
+  overflow-wrap: anywhere;
+}
+.card select,
+form select,
+form textarea {
+  display: block;
+  width: 100%;
+  margin: 5px 0;
+}
+.card p {
+  white-space: pre-line;
+}
+aside {
+  position: sticky;
+  top: 10px;
+  max-height: 89vh;
+  overflow: auto;
+}
+#points button,
+#jobs button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 5px 0;
+}
+.evidence {
+  background: #f2f6f0;
+  border-radius: 6px;
+  padding: 12px;
+}
+dl {
+  margin: 8px 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+}
+dt {
+  color: #53675d;
+}
+dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+form label {
+  display: block;
+  margin: 8px 0;
+}
+textarea {
+  resize: vertical;
+}
+.event {
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+#message:not(:empty) {
+  background: #fff1cb;
+  padding: 10px;
+  border-left: 4px solid #bc8933;
+}
+.status {
+  color: #754902;
+  font-weight: bold;
+}
+p {
+  margin: 6px 0 12px;
+}
+[hidden] {
+  display: none !important;
+}

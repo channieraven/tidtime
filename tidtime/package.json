@@ -1,0 +1,45 @@
+{
+  "name": "tidtime",
+  "productName": "tidtime",
+  "version": "0.1.1",
+  "description": "ตรวจรอบสำรวจแปลงป่าไม้บนเครื่อง",
+  "author": "tidtime",
+  "license": "ISC",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "samples": "node samples.js",
+    "dist:win": "electron-builder --win nsis --x64",
+    "test:ui": "node test/run-ui.cjs"
+  },
+  "dependencies": {
+    "decimal.js": "10.6.0",
+    "exceljs": "4.4.0"
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "org.tidtime.survey",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "style.css",
+      "renderer.js",
+      "excel.js",
+      "mris.js",
+      "compare.js",
+      "store.js"
+    ],
+    "win": {
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "artifactName": "tidtime-Setup-${version}-x64.exe"
+    }
+  }
+}

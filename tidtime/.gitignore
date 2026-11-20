@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+*.xls*
+*.csv
+*.tsv
+surveys/
+*.json
+!package.json
+!package-lock.json
+.env*
+.npmrc

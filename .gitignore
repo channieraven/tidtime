@@ -1,0 +1,24 @@
+# Survey workbooks, officer reviews, and local exports
+*.xls*
+*.csv
+*.tsv
+*.sqlite*
+*.db
+*.json
+!package.json
+!package-lock.json
+surveys/
+raw-data/
+*.png
+*.jpg
+*.pdf
+*.zip
+*.exe
+node_modules/
+dist/
+*.log
+.env*
+.npmrc
+*.pem
+*.key
+*.pfx
