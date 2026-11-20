@@ -8,13 +8,6 @@ const decisions = {
   replacement: "ยืนยันว่าปลูกทดแทน",
 };
 const previews = {};
-const years = {};
-function updateCreate() {
-  $("create").disabled = !Object.keys(titles).every(
-    (side) =>
-      previews[side] && (!previews[side].form || /^\d{4}$/.test(years[side])),
-  );
-}
 let job, selected;
 function el(tag, text, parent) {
   const node = document.createElement(tag);
@@ -72,20 +65,7 @@ for (const side of Object.keys(titles)) {
   sheets.hidden = true;
   sheets.ariaLabel = "ชีต" + titles[side];
   const meta = el("p", "", card);
-  const yearLabel = el("label", "ปีรอบสำรวจ (พ.ศ.) ตามทะเบียนรอบ ", card);
-  const year = el("input", null, yearLabel);
-  year.placeholder = "พ.ศ. 4 หลัก";
-  year.maxLength = 4;
-  year.inputMode = "numeric";
-  yearLabel.hidden = true;
-  year.oninput = () => {
-    years[side] = year.value.trim();
-    updateCreate();
-  };
   function reset() {
-    yearLabel.hidden = true;
-    year.value = "";
-    delete years[side];
     delete previews[side];
     $("create").disabled = true;
     meta.textContent = "";
@@ -95,8 +75,7 @@ for (const side of Object.keys(titles)) {
     try {
       previews[side] = await api.sheet(side, sheets.value);
       meta.textContent = previewText(previews[side]);
-      yearLabel.hidden = !previews[side].form;
-      updateCreate();
+      $("create").disabled = !(previews.before && previews.after);
     } catch (e) {
       meta.textContent = e.message.replace(/^.*?Error: /, "");
     }
@@ -159,7 +138,7 @@ $("archive").onclick = () =>
         $("jobs"),
       ).onclick = () => run(async () => openJob(await api.load(j.id)));
   });
-$("create").onclick = () => run(async () => openJob(await api.create(years)));
+$("create").onclick = () => run(async () => openJob(await api.create()));
 $("filter").onchange = points;
 function points() {
   const list = job.points.filter((p) => !$("filter").checked || p.needsReview);
