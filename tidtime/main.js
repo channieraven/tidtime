@@ -8,7 +8,7 @@ const {
   columns,
   displayDate,
 } = require("./excel");
-const { pairRounds, compareTree } = require("./compare");
+const { matchPoints, compareTree } = require("./compare");
 const { Store } = require("./store");
 const slots = new Map();
 let store;
@@ -22,7 +22,7 @@ function view(job) {
     if (!histories.has(e.key)) histories.set(e.key, []);
     histories.get(e.key).push(e);
   }
-  const points = pairRounds(job.before, job.after).map((p) => {
+  const points = matchPoints(job.before, job.after).map((p) => {
     const history = histories.get(p.key) || [];
     const latest = history.at(-1);
     const result = compareTree(

@@ -10,7 +10,7 @@ const fieldTest = Boolean(
 const samples = fieldTest
   ? [process.env.TIDTIME_TEST_SNAPSHOT, process.env.TIDTIME_TEST_FIELD]
   : [2568, 2569].map((year) =>
-      path.join(__dirname, "../examples/P01-" + year + ".xlsx"),
+      path.join(directory, "P01-" + year + ".xlsx"),
     );
 dialog.showOpenDialog = async () => ({
   canceled: false,

@@ -1,4 +1,4 @@
-const Decimal = require("decimal.js");
+const { matchRows, compareNumbers, observationDate } = require("./core");
 
 const measurements = [
   ["height", "ความสูง", "เมตร"],
@@ -10,37 +10,54 @@ function pairRounds(before, after) {
   if (before.form && after.form && before.form !== after.form)
     throw Error("กรุณาเลือกชีตแบบเดียวกันทั้งสองรอบ");
   if (before.plot !== after.plot) throw Error("สองชีตมาจากคนละแปลง กรุณาเลือกใหม่");
-  if (+before.year >= +after.year)
-    throw Error("ปีรอบปัจจุบันต้องอยู่หลังปีรอบก่อน กรุณาตรวจไฟล์และชีต");
-  const points = new Map();
-  for (const [side, round] of [
-    ["before", before],
-    ["after", after],
-  ]) {
-    for (const row of round.rows) {
-      const plot = clean(row.plot),
-        no = clean(row.no);
-      const key =
-        plot && no
-          ? JSON.stringify([plot, no])
-          : JSON.stringify([side, row.sourceSheet || "", row.line, null]);
-      if (!points.has(key))
-        points.set(key, { key, plot, no, before: [], after: [] });
-      points.get(key)[side].push(row);
-    }
+  const earlier = observationDate(before.rows, surveyDay);
+  const later = observationDate(after.rows, surveyDay);
+  if (earlier && later && earlier !== later) {
+    if (earlier > later) throw Error("วันที่สำรวจรอบปัจจุบันต้องอยู่หลังรอบก่อน");
+  } else if (+before.year === +after.year) {
+    throw Error(
+      "รอบปีเดียวกันต้องมีวันที่สำรวจครบทุกแถว เป็นวันเดียวภายในรอบ และเป็นคนละวันระหว่างรอบ",
+    );
+  } else if (+before.year > +after.year) {
+    throw Error("ปีรอบปัจจุบันต้องอยู่หลังปีรอบก่อน");
   }
-  return [...points.values()].sort(
-    (a, b) =>
-      a.no.localeCompare(b.no, "th", { numeric: true }) ||
-      a.key.localeCompare(b.key),
+  return matchPoints(before, after);
+}
+
+function surveyDay(row) {
+  const text = clean(row.date);
+  const thai = /^(\d{1,2})([-/])(\d{1,2})\2(\d{4})$/.exec(text);
+  if (!thai) return text;
+  return (
+    String(Number(thai[4]) - 543) +
+    "-" +
+    thai[3].padStart(2, "0") +
+    "-" +
+    thai[1].padStart(2, "0")
   );
 }
 
-function decimal(raw) {
-  const value = clean(raw);
-  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value)
-    ? new Decimal(value)
-    : null;
+// Saved reviews reference the 0.1.1 key, including sheet and line for blank keys.
+function matchPoints(before, after) {
+  const groups = matchRows(before.rows, after.rows, (row) => {
+    const plot = clean(row.plot),
+      no = clean(row.no);
+    return plot && no ? JSON.stringify([plot, no]) : null;
+  });
+  return groups
+    .map((group) => {
+      const side = group.before.length ? "before" : "after";
+      const row = group[side][0];
+      const key =
+        group.key ??
+        JSON.stringify([side, row.sourceSheet || "", row.line, null]);
+      return { ...group, key, plot: clean(row.plot), no: clean(row.no) };
+    })
+    .sort(
+      (a, b) =>
+        a.no.localeCompare(b.no, "th", { numeric: true }) ||
+        a.key.localeCompare(b.key),
+    );
 }
 
 function compareTree(point, review) {
@@ -48,9 +65,9 @@ function compareTree(point, review) {
   function result(status, needsReview = true) {
     return { status, needsReview, lines };
   }
-  if (!point.plot || !point.no) return result("คีย์จุดปลูกว่าง · พักการเปรียบเทียบ");
-  if (point.before.length > 1 || point.after.length > 1)
-    return result("คีย์จุดปลูกซ้ำ · พักการเปรียบเทียบ");
+  if (point.status === "missing-key")
+    return result("คีย์จุดปลูกว่าง · พักการเปรียบเทียบ");
+  if (point.status === "duplicate") return result("คีย์จุดปลูกซ้ำ · พักการเปรียบเทียบ");
   const [a] = point.before,
     [b] = point.after;
   const metrics =
@@ -69,7 +86,11 @@ function compareTree(point, review) {
             ],
           ]
         : measurements;
-  if (!a || !b) return result(a ? "พบเฉพาะรอบก่อน" : "พบเฉพาะรอบปัจจุบัน", !review);
+  if (point.status !== "paired")
+    return result(
+      point.status === "before-only" ? "พบเฉพาะรอบก่อน" : "พบเฉพาะรอบปัจจุบัน",
+      !review,
+    );
   let incomplete = false;
   for (const [field, label] of [
     ["id", "รหัสต้นไม้"],
@@ -97,22 +118,25 @@ function compareTree(point, review) {
     return result("รอตรวจสอบว่าเป็นต้นเดิมหรือปลูกทดแทน");
   }
   let warnings = 0;
-  for (const [field, label, unit] of metrics) {
-    const old = decimal(a[field]),
-      next = decimal(b[field]);
-    if (!old || !next) {
+  const changes = compareNumbers(
+    point,
+    metrics.map(([field]) => field),
+  );
+  for (const [index, change] of changes.entries()) {
+    const [, label, unit] = metrics[index];
+    if (change.delta === null) {
       lines.push(label + " มีข้อมูลไม่พอ");
-    } else if (next.lt(old)) {
+    } else if (change.delta.startsWith("-")) {
       lines.push(
         label +
           "ลดลง " +
-          old.minus(next).toFixed() +
+          change.delta.slice(1) +
           " " +
           unit +
           " (" +
-          a[field] +
+          change.before +
           " → " +
-          b[field] +
+          change.after +
           " " +
           unit +
           ")",
@@ -126,4 +150,4 @@ function compareTree(point, review) {
   );
 }
 
-module.exports = { pairRounds, compareTree };
+module.exports = { pairRounds, matchPoints, compareTree };

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { randomUUID } = require("node:crypto");
-const { pairRounds } = require("./compare");
+const { pairRounds, matchPoints } = require("./compare");
 
 function validDate(value) {
   return (
@@ -62,7 +62,7 @@ class Store {
   }
   review(id, key, input) {
     const job = this.load(id);
-    const point = pairRounds(job.before, job.after).find((p) => p.key === key);
+    const point = matchPoints(job.before, job.after).find((p) => p.key === key);
     if (!point) throw Error("ไม่พบจุดปลูก");
     const { decision, note, checked, planted } = input;
     if (

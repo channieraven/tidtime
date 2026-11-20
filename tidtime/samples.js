@@ -2,7 +2,7 @@ const ExcelJS = require("exceljs");
 const fs = require("node:fs");
 const path = require("node:path");
 const { columns } = require("./excel");
-const directory = path.join(__dirname, "examples");
+
 const specimens = [
   [1, "T001", "มะม่วง", 1.5, 3],
   [2, "T002", "มะขามป้อม", 1.8, 4],
@@ -17,7 +17,7 @@ const current = [
   [2, "T019", "หว้า", 0.7, 1.4],
   [6, "T006", "ประดู่", 1, 2],
 ];
-async function sample(year, rows) {
+async function sample(directory, year, rows) {
   const wb = new ExcelJS.Workbook();
   function sheet(name, records) {
     const s = wb.addWorksheet(name);
@@ -50,8 +50,16 @@ async function sample(year, rows) {
     sheet("ทดสอบคีย์ซ้ำ", [...rows, rows[1], [null, "T007", "หว้า", 1, 2]]);
   await wb.xlsx.writeFile(path.join(directory, "P01-" + year + ".xlsx"));
 }
-fs.mkdirSync(directory, { recursive: true });
-Promise.all([sample(2568, specimens), sample(2569, current)]).catch((e) => {
-  console.error(e);
-  process.exitCode = 1;
-});
+async function writeSamples(directory) {
+  fs.mkdirSync(directory, { recursive: true });
+  await Promise.all([
+    sample(directory, 2568, specimens),
+    sample(directory, 2569, current),
+  ]);
+}
+if (require.main === module)
+  writeSamples(path.join(__dirname, "examples")).catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+module.exports = { writeSamples };

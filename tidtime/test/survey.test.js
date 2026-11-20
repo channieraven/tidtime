@@ -6,7 +6,15 @@ const path = require("node:path");
 const { openExcel, readSheet, displayDate } = require("../excel");
 const { pairRounds, compareTree } = require("../compare");
 const { Store } = require("../store");
-const file = (y) => path.join(__dirname, "../examples/P01-" + y + ".xlsx");
+const { writeSamples } = require("../samples");
+const { before, after } = require("node:test");
+let directory;
+before(async () => {
+  directory = fs.mkdtempSync(path.join(os.tmpdir(), "tidtime-samples-"));
+  await writeSamples(directory);
+});
+after(() => fs.rmSync(directory, { recursive: true, force: true }));
+const file = (y) => path.join(directory, "P01-" + y + ".xlsx");
 async function rounds(sheet = "สำรวจ") {
   const [a, b] = await Promise.all([
     openExcel(file(2568)),
@@ -114,4 +122,71 @@ test("เปิดคลังใหม่หลังบันทึก อ่�
   assert.match(result.lines.join(" "), /ค่าแรกของต้นใหม่.*0.7/);
   assert.doesNotMatch(result.lines.join(" "), /ลดลง/);
   assert.deepEqual(fs.readFileSync(file(2569)), original);
+});
+
+test("เรียงตามวันสำรวจจริง และพักเมื่อวันในปีเดียวกันกำกวม", async () => {
+  const [a, b] = await rounds();
+  const dated = (round, date) => ({
+    ...round,
+    year: "2569",
+    rows: round.rows.map((row) => ({ ...row, date })),
+  });
+  const january = dated(a, "15/01/2569"),
+    june = dated(b, "2026-06-15");
+  assert.match(compareTree(pairRounds(january, june)[0]).lines[0], /0.5 เมตร/);
+  assert.throws(() => pairRounds(june, january), /วันที่สำรวจ/);
+  for (const bad of ["", "31-02-2569", "2026-01-15"]) {
+    assert.throws(() => pairRounds(january, dated(b, bad)), /ปีเดียวกัน/);
+  }
+  june.rows[1].date = "2026-06-16";
+  assert.throws(() => pairRounds(january, june), /ปีเดียวกัน/);
+  june.rows[1].date = "";
+  assert.throws(() => pairRounds(january, june), /ปีเดียวกัน/);
+});
+
+test("เปิด JSON โครงสร้าง 0.1.1 และเชื่อมเหตุการณ์ทดแทนด้วยคีย์เดิม", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "tidtime-legacy-"));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const [before, after] = await rounds();
+  const id = "10000000-0000-4000-8000-000000000001";
+  const event = {
+    key: '["P01","2"]',
+    decision: "replacement",
+    note: "ทดสอบ",
+    checked: "2026-08-01",
+    saved: "2026-08-02T02:00:00Z",
+    planted: null,
+    previousSheet: "สำรวจ",
+    previousLine: 3,
+    baselineSheet: "สำรวจ",
+    baselineLine: 5,
+  };
+  fs.writeFileSync(
+    path.join(directory, id + ".json"),
+    JSON.stringify({
+      id,
+      created: event.saved,
+      before,
+      after,
+      history: [event],
+    }),
+  );
+  const store = new Store(directory);
+  const restored = store.load(id);
+  const point = require("../compare")
+    .matchPoints(restored.before, restored.after)
+    .find((p) => p.key === restored.history[0].key);
+  assert.equal(point.before[0].line, event.previousLine);
+  assert.equal(point.after[0].line, event.baselineLine);
+  assert.equal(point.before[0].id, "T002");
+  assert.match(
+    compareTree(point, restored.history[0]).lines.join(" "),
+    /ค่าแรกของต้นใหม่.*0.7/,
+  );
+  const revised = store.review(id, event.key, {
+    decision: "same",
+    note: "ทบทวน",
+    checked: "2026-08-03",
+  });
+  assert.deepEqual(revised.history[0], event);
 });

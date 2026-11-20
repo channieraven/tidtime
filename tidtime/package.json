@@ -33,6 +33,7 @@
       "excel.js",
       "mris.js",
       "compare.js",
+      "core.js",
       "store.js"
     ],
     "win": {
