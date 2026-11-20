@@ -31,7 +31,6 @@
       "style.css",
       "renderer.js",
       "excel.js",
-      "mris.js",
       "compare.js",
       "core.js",
       "store.js"

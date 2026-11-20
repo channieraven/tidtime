@@ -1,13 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain, session } = require("electron");
 const path = require("node:path");
-const {
-  openExcel,
-  sheetOptions,
-  readSheet,
-  setSurveyYear,
-  columns,
-  displayDate,
-} = require("./excel");
+const { openExcel, readSheet, columns, displayDate } = require("./excel");
 const { matchPoints, compareTree } = require("./compare");
 const { Store } = require("./store");
 const slots = new Map();
@@ -73,7 +66,7 @@ function register() {
     slots.set(side, { source });
     return {
       file: source.file,
-      sheets: sheetOptions(source),
+      sheets: source.workbook.worksheets.map((sheet) => sheet.name),
     };
   });
   ipcMain.handle("sheet", (_, side, name) => {
@@ -82,16 +75,11 @@ function register() {
     item.round = readSheet(item.source, name);
     return summary(item.round);
   });
-  ipcMain.handle("create", (_, years = {}) => {
+  ipcMain.handle("create", () => {
     const a = slot("before")?.round,
       b = slot("after")?.round;
     if (!a || !b) throw Error("กรุณาเลือกทั้งสองชีต");
-    return view(
-      store.create(
-        setSurveyYear(a, years.before),
-        setSurveyYear(b, years.after),
-      ),
-    );
+    return view(store.create(a, b));
   });
   ipcMain.handle("list", () => store.list());
   ipcMain.handle("load", (_, id) => view(store.load(id)));

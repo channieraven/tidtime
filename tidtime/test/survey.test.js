@@ -6,7 +6,7 @@ const path = require("node:path");
 const { openExcel, readSheet, displayDate } = require("../excel");
 const { pairRounds, compareTree } = require("../compare");
 const { Store } = require("../store");
-const { writeSamples } = require("../samples");
+const { writeSamples } = require("./equipment-fixture");
 const { before, after } = require("node:test");
 let directory;
 before(async () => {
@@ -14,13 +14,13 @@ before(async () => {
   await writeSamples(directory);
 });
 after(() => fs.rmSync(directory, { recursive: true, force: true }));
-const file = (y) => path.join(directory, "P01-" + y + ".xlsx");
-async function rounds(sheet = "สำรวจ") {
+const file = (y) => path.join(directory, "RACK-A-" + y + ".xlsx");
+async function rounds(sheet = "ชั้นวาง") {
   const [a, b] = await Promise.all([
     openExcel(file(2568)),
     openExcel(file(2569)),
   ]);
-  return [readSheet(a, "สำรวจ"), readSheet(b, sheet)];
+  return [readSheet(a, "ชั้นวาง"), readSheet(b, sheet)];
 }
 test("อ่าน Excel จริง จับคู่ตามจุดและตรวจแต่ละค่าวัด", async () => {
   const [a, b] = await rounds(),
@@ -37,14 +37,14 @@ test("อ่าน Excel จริง จับคู่ตามจุดแล
   assert.equal(results[1].lines.length, 2);
   assert.match(results[1].status, /รอตรวจสอบ/);
   assert.deepEqual(results[2].lines, [
-    "RCDลดลง 0.25 เซนติเมตร (5 → 4.75 เซนติเมตร)",
+    "RCDลดลง 1.25 เซนติเมตร (24 → 22.75 เซนติเมตร)",
   ]);
   assert.match(results[3].lines[0], /ไม่พอ/);
   assert.match(results[3].lines[1], /RCDลดลง/);
   assert.equal(results[4].status, "พบเฉพาะรอบก่อน");
   assert.equal(results[5].status, "พบเฉพาะรอบปัจจุบัน");
-  assert.equal(displayDate(points[1].after[0].date), "25-07-2569");
-  assert.equal(displayDate(points[0].after[0].date), "25-07-2569");
+  assert.equal(displayDate(points[1].after[0].date), "10-03-2569");
+  assert.equal(displayDate(points[0].after[0].date), "10-03-2569");
   assert.equal(displayDate(a.rows[0].date), "ไม่ระบุวันที่");
   assert.equal(points[1].after[0].line, 5);
   assert.equal(
@@ -71,10 +71,10 @@ test("พักจุดซ้ำพร้อมทุกแถวและพ�
 });
 test("ปฏิเสธแปลงต่างกัน ผิดลำดับปี หลายรอบ และหัวตารางขาด", async () => {
   const [a, b] = await rounds();
-  assert.throws(() => pairRounds(a, { ...b, plot: "P02" }), /คนละแปลง/);
+  assert.throws(() => pairRounds(a, { ...b, plot: "RACK-B" }), /คนละแปลง/);
   assert.throws(() => pairRounds(b, a), /ปี/);
   const source = await openExcel(file(2569)),
-    s = source.workbook.getWorksheet("สำรวจ");
+    s = source.workbook.getWorksheet("ชั้นวาง");
   s.getCell("E3").value = 2568;
   assert.throws(() => readSheet(source, s.name), /หลายรอบ/);
   s.getCell("A1").value = "";
@@ -88,7 +88,7 @@ test("เปิดคลังใหม่หลังบันทึก อ่�
     [a, b] = await rounds(),
     job = store.create(a, b);
   const p = pairRounds(a, b)[1],
-    note = "เจ้าหน้าที่ประจำแปลงยืนยันทางโทรศัพท์";
+    note = "ตรวจรายการกับคลังอุปกรณ์";
   store.review(job.id, p.key, {
     decision: "same",
     checked: "2026-07-27",
@@ -113,13 +113,13 @@ test("เปิดคลังใหม่หลังบันทึก อ่�
   const baseline = restored.after.rows.find(
     (r) => r.line === last.baselineLine,
   );
-  assert.equal(baseline.height, 0.7);
+  assert.equal(baseline.height, 4);
   assert.equal(
     restored.before.rows.find((r) => r.line === last.previousLine).id,
-    "T002",
+    "BOX-BLUE",
   );
   const result = compareTree(p, last);
-  assert.match(result.lines.join(" "), /ค่าแรกของต้นใหม่.*0.7/);
+  assert.match(result.lines.join(" "), /ค่าแรกของต้นใหม่.*4/);
   assert.doesNotMatch(result.lines.join(" "), /ลดลง/);
   assert.deepEqual(fs.readFileSync(file(2569)), original);
 });
@@ -150,15 +150,15 @@ test("เปิด JSON โครงสร้าง 0.1.1 และเชื่�
   const [before, after] = await rounds();
   const id = "10000000-0000-4000-8000-000000000001";
   const event = {
-    key: '["P01","2"]',
+    key: '["RACK-A","2"]',
     decision: "replacement",
     note: "ทดสอบ",
     checked: "2026-08-01",
     saved: "2026-08-02T02:00:00Z",
     planted: null,
-    previousSheet: "สำรวจ",
+    previousSheet: "ชั้นวาง",
     previousLine: 3,
-    baselineSheet: "สำรวจ",
+    baselineSheet: "ชั้นวาง",
     baselineLine: 5,
   };
   fs.writeFileSync(
@@ -178,10 +178,10 @@ test("เปิด JSON โครงสร้าง 0.1.1 และเชื่�
     .find((p) => p.key === restored.history[0].key);
   assert.equal(point.before[0].line, event.previousLine);
   assert.equal(point.after[0].line, event.baselineLine);
-  assert.equal(point.before[0].id, "T002");
+  assert.equal(point.before[0].id, "BOX-BLUE");
   assert.match(
     compareTree(point, restored.history[0]).lines.join(" "),
-    /ค่าแรกของต้นใหม่.*0.7/,
+    /ค่าแรกของต้นใหม่.*4/,
   );
   const revised = store.review(id, event.key, {
     decision: "same",
